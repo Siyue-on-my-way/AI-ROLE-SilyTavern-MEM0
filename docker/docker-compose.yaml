@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  sillytavern:
+    build:
+      context: ../SillyTavern
+      dockerfile: Dockerfile
+    container_name: sillytavern
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./volumes/sillytavern/config:/home/node/app/config
+      - ./volumes/sillytavern/data:/home/node/app/data
+      - ./volumes/sillytavern/plugins:/home/node/app/plugins
+      - ./volumes/sillytavern/public/user:/home/node/app/public/user
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    depends_on:
+      - mem0
+
+  mem0:
+    build:
+      context: ../mem0/server
+      dockerfile: Dockerfile
+    container_name: mem0
+    ports:
+      - "8001:8000"
+    environment:
+      - MEM0_POSTGRES_HOST=mem0-postgres
+      - MEM0_POSTGRES_PORT=5432
+      - MEM0_POSTGRES_USER=postgres
+      - MEM0_POSTGRES_PASSWORD=postgres
+      - MEM0_POSTGRES_DB=mem0
+      - MEM0_NEO4J_URI=bolt://mem0-neo4j:7687
+      - MEM0_NEO4J_USERNAME=neo4j
+      - MEM0_NEO4J_PASSWORD=password
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    restart: unless-stopped
+    depends_on:
+      mem0-postgres:
+        condition: service_healthy
+      mem0-neo4j:
+        condition: service_started
+
+  mem0-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mem0-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mem0
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mem0-neo4j:
+    image: neo4j:5
+    container_name: mem0-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/password
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    volumes:
+      - ./volumes/neo4j/data:/data
+    restart: unless-stopped
