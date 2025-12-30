@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  sillytavern:
+  ai-role-sillytavern:
     build:
       context: ../SillyTavern
       dockerfile: Dockerfile
     container_name: sillytavern
     ports:
-      - "8000:8000"
+      - "58000:8000"
     volumes:
       - ./volumes/sillytavern/config:/home/node/app/config
       - ./volumes/sillytavern/data:/home/node/app/data
@@ -15,45 +15,48 @@ services:
       - ./volumes/sillytavern/public/user:/home/node/app/public/user
     environment:
       - NODE_ENV=production
+      - SILLYTAVERN_SECURITYOVERRIDE=true
     restart: unless-stopped
     depends_on:
-      - mem0
+      - ai-role-mem0
 
-  mem0:
+  ai-role-mem0:
     build:
       context: ../mem0/server
       dockerfile: Dockerfile
     container_name: mem0
     ports:
-      - "8001:8000"
+      - "58001:8000"
     environment:
-      - MEM0_POSTGRES_HOST=mem0-postgres
-      - MEM0_POSTGRES_PORT=5432
-      - MEM0_POSTGRES_USER=postgres
-      - MEM0_POSTGRES_PASSWORD=postgres
-      - MEM0_POSTGRES_DB=mem0
-      - MEM0_NEO4J_URI=bolt://mem0-neo4j:7687
-      - MEM0_NEO4J_USERNAME=neo4j
-      - MEM0_NEO4J_PASSWORD=password
+      - POSTGRES_HOST=mem0-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mem0
+      - NEO4J_URI=bolt://mem0-neo4j:7687
+      - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=password
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./volumes/mem0/history:/app/history
     restart: unless-stopped
     depends_on:
-      mem0-postgres:
+      ai-role-mem0-postgres:
         condition: service_healthy
-      mem0-neo4j:
+      ai-role-mem0-neo4j:
         condition: service_started
 
-  mem0-postgres:
-    image: pgvector/pgvector:pg16
+  ai-role-mem0-postgres:
+    image: ankane/pgvector:v0.5.1
     container_name: mem0-postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=mem0
     ports:
-      - "5433:5432"
+      - "55433:5432"
     volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
+      - /data/ai-role/mem0/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -61,14 +64,14 @@ services:
       retries: 5
     restart: unless-stopped
 
-  mem0-neo4j:
-    image: neo4j:5
+  ai-role-mem0-neo4j:
+    image: neo4j:5.26.4
     container_name: mem0-neo4j
     environment:
       - NEO4J_AUTH=neo4j/password
     ports:
-      - "7475:7474"
-      - "7688:7687"
+      - "57475:7474"
+      - "57688:7687"
     volumes:
-      - ./volumes/neo4j/data:/data
+      - /data/ai-role/mem0/neo4j/data:/data
     restart: unless-stopped
