@@ -1,9 +1,7 @@
 {
     "firstRun": false,
     "accountStorage": {
-        "__migrated": "1",
-        "NavOpened": "false",
-        "LNavOpened": "false"
+        "__migrated": "1"
     },
     "currentVersion": "1.14.0",
     "username": "siyue",
@@ -458,11 +456,7 @@
         "note": {
             "default": "",
             "chara": [],
-            "wiAddition": [],
-            "defaultPosition": 1,
-            "defaultDepth": 4,
-            "defaultInterval": 1,
-            "defaultRole": 0
+            "wiAddition": []
         },
         "caption": {
             "refine_mode": false,
@@ -709,11 +703,7 @@
                     }
                 ]
             },
-            "characterConfigs": {
-                "default_Assistant.png": {
-                    "setList": []
-                }
-            }
+            "characterConfigs": {}
         }
     },
     "tags": [
@@ -726,8 +716,7 @@
     "tag_map": {
         "default_Seraphina.png": [
             "1345561466591"
-        ],
-        "default_Assistant.png": []
+        ]
     },
     "nai_settings": {
         "temperature": 1.5,
@@ -1106,8 +1095,8 @@
         "extensions": {}
     },
     "background": {
-        "name": "landscape winter lake house.jpg",
-        "url": "url(\"backgrounds/landscape%20winter%20lake%20house.jpg\")",
+        "name": "__transparent.png",
+        "url": "url(\"backgrounds/__transparent.png\")",
         "fitting": "classic",
         "animation": false,
         "thumbnailColumns": 5
