@@ -1,0 +1,565 @@
+/**
+ * Xiaojiuguan Modern Pro Theme
+ * 
+ * A modern, clean visual refresh for SillyTavern that maintains all functionality
+ * while improving readability, hierarchy, and overall aesthetics.
+ * 
+ * Design Principles:
+ * - Preserve all DOM structure and functionality
+ * - Override visual styles via CSS variables and targeted selectors
+ * - Maintain compatibility with existing theme system and Custom CSS
+ * - Improve typography, spacing, shadows, and component consistency
+ */
+
+/* ========== CORE VARIABLES OVERRIDE ========== */
+:root {
+    /* Typography - Modern, readable font stack */
+    --mainFontFamily: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --monoFontFamily: 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', 'Courier New', monospace;
+
+    /* Refined spacing & radius */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 24px;
+    
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+    --radius-full: 9999px;
+
+    /* Enhanced shadow system */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.12);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.18);
+    --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.22);
+
+    /* Interaction states */
+    --hover-opacity: 0.85;
+    --transition-speed: 180ms;
+    --transition-easing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ========== GLOBAL REFINEMENTS ========== */
+* {
+    transition: background-color var(--transition-speed) var(--transition-easing),
+                border-color var(--transition-speed) var(--transition-easing),
+                opacity var(--transition-speed) var(--transition-easing),
+                box-shadow var(--transition-speed) var(--transition-easing);
+}
+
+body {
+    font-family: var(--mainFontFamily);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Improved scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--grey7070a);
+    border-radius: var(--radius-full);
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(175, 175, 175, 0.9);
+    background-clip: content-box;
+}
+
+/* ========== TOP BAR ========== */
+#top-bar {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#top-settings-holder {
+    /* Ensure drawer icons have better spacing */
+}
+
+.drawer-icon {
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.drawer-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+/* ========== CHAT AREA ========== */
+#chat {
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Message container */
+.mes {
+    padding: var(--spacing-lg) var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-speed) var(--transition-easing);
+}
+
+.mes:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Avatar styling */
+.mes .avatar {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: transform var(--transition-speed) var(--transition-easing);
+}
+
+.mes .avatar:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+/* Message text bubble */
+.mes_text {
+    border-radius: var(--radius-md);
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+}
+
+/* User vs Bot message differentiation */
+.mes[is_user="true"] .mes_text {
+    background: rgba(80, 120, 200, 0.12);
+    border-left: 3px solid var(--SmartThemeQuoteColor);
+}
+
+.mes[is_user="false"] .mes_text {
+    background: rgba(60, 65, 80, 0.15);
+}
+
+/* Character name */
+.ch_name {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    opacity: 0.9;
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Message buttons */
+.mes_buttons,
+.extraMesButtons {
+    border-radius: var(--radius-sm);
+    backdrop-filter: blur(8px);
+}
+
+.mes_button,
+.extraMesButton {
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.mes_button:hover,
+.extraMesButton:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+/* ========== SEND FORM (INPUT AREA) ========== */
+#send_form {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.15);
+}
+
+#send_textarea {
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    line-height: 1.5;
+    resize: none;
+}
+
+#send_textarea:focus-visible {
+    outline: 2px solid var(--SmartThemeQuoteColor);
+    outline-offset: 2px;
+}
+
+#send_form:has(#send_textarea:focus-visible) {
+    border-color: rgba(140, 180, 250, 0.4);
+    box-shadow: 0 -2px 16px rgba(140, 180, 250, 0.15);
+}
+
+/* Send form buttons */
+#leftSendForm > div,
+#rightSendForm > div {
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+#leftSendForm > div:hover,
+#rightSendForm > div:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(1.08);
+}
+
+#send_but {
+    background: var(--SmartThemeQuoteColor);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-md);
+}
+
+#send_but:hover {
+    box-shadow: var(--shadow-lg);
+    filter: brightness(1.15);
+}
+
+/* ========== DRAWERS & PANELS ========== */
+.drawer-content {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+
+.drawer-content.openDrawer {
+    animation: drawerSlideIn var(--animation-duration-2x) var(--transition-easing);
+}
+
+@keyframes drawerSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Drawer headers */
+.inline-drawer-header,
+.standoutHeader {
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.05) 0%, 
+        rgba(255, 255, 255, 0.02) 100%);
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.inline-drawer-header:hover,
+.standoutHeader:hover {
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.08) 0%, 
+        rgba(255, 255, 255, 0.04) 100%);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Drawer content sections */
+.inline-drawer-content {
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+}
+
+.scrollableInner {
+    padding: var(--spacing-sm);
+}
+
+/* ========== FORM CONTROLS ========== */
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+select,
+textarea,
+.text_pole {
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 8px 12px;
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="search"]:focus,
+select:focus,
+textarea:focus,
+.text_pole:focus {
+    outline: 2px solid var(--SmartThemeQuoteColor);
+    outline-offset: 1px;
+    border-color: var(--SmartThemeQuoteColor);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+/* Buttons */
+button,
+.menu_button {
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    transition: all var(--transition-speed) var(--transition-easing);
+    cursor: pointer;
+}
+
+button:hover:not(:disabled),
+.menu_button:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+button:active,
+.menu_button:active {
+    transform: translateY(0);
+}
+
+button:disabled,
+.menu_button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Primary button style */
+button.primary,
+.menu_button.primary {
+    background: var(--SmartThemeQuoteColor);
+    border-color: var(--SmartThemeQuoteColor);
+    color: #fff;
+}
+
+button.primary:hover,
+.menu_button.primary:hover {
+    filter: brightness(1.15);
+}
+
+/* Icon buttons */
+.menu_button_icon {
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.menu_button_icon:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(1.05);
+}
+
+/* Checkbox & Radio */
+input[type="checkbox"],
+input[type="radio"] {
+    cursor: pointer;
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.checkbox_label {
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.checkbox_label:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+}
+
+/* ========== RANGE SLIDERS ========== */
+.range-block {
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.range-block-title {
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+    opacity: 0.95;
+}
+
+input[type="range"] {
+    cursor: pointer;
+}
+
+/* ========== POPUPS & MODALS ========== */
+#shadow_popup {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+#dialogue_popup {
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: var(--shadow-xl);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+#dialogue_popup_text {
+    padding: var(--spacing-xl);
+}
+
+/* ========== TAGS ========== */
+.tag {
+    border-radius: var(--radius-full);
+    padding: 4px 12px;
+    font-size: 0.85em;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.tag:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+/* ========== CHARACTER LIST & CARDS ========== */
+#rm_print_characters_block {
+    gap: var(--spacing-md);
+}
+
+.character_select {
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all var(--transition-speed) var(--transition-easing);
+    overflow: hidden;
+}
+
+.character_select:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ========== WORLD INFO ========== */
+#WorldInfo {
+    border-radius: var(--radius-lg);
+}
+
+.world_entry {
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* ========== LLM CONFIG & MEM0 PANELS ========== */
+#llm-config-panel,
+#extensions_settings,
+#extensions_settings2 {
+    /* Inherit drawer styles, no extra changes needed */
+}
+
+/* Ensure mem0 config inputs are consistent */
+#openai_mem0_enabled,
+#mem0_enabled,
+#mem0_rewrite_enabled {
+    cursor: pointer;
+}
+
+/* ========== MOBILE OPTIMIZATIONS ========== */
+@media screen and (max-width: 1000px) {
+    :root {
+        --spacing-md: 10px;
+        --spacing-lg: 14px;
+    }
+
+    .mes {
+        padding: var(--spacing-md) var(--spacing-sm);
+    }
+
+    #send_form {
+        border-radius: 0;
+    }
+
+    .drawer-content {
+        border-radius: var(--radius-md);
+    }
+
+    /* Larger touch targets */
+    button,
+    .menu_button,
+    .menu_button_icon {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    #send_textarea {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}
+
+/* ========== REDUCED MOTION SUPPORT ========== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========== UTILITIES ========== */
+.flex-container {
+    gap: var(--spacing-sm);
+}
+
+.flexGap10 {
+    gap: 10px;
+}
+
+.flexGap5 {
+    gap: var(--spacing-xs);
+}
+
+/* Improved focus visibility for accessibility */
+*:focus-visible {
+    outline: 2px solid var(--SmartThemeQuoteColor);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+/* Smooth hover states for interactive elements */
+.interactable,
+[role="button"],
+[role="link"] {
+    cursor: pointer;
+    transition: all var(--transition-speed) var(--transition-easing);
+}
+
+.interactable:hover,
+[role="button"]:hover,
+[role="link"]:hover {
+    opacity: var(--hover-opacity);
+}
+
+/* ========== THEME COMPATIBILITY ========== */
+/* Ensure this theme respects user's Custom CSS (loaded after this file) */
+/* All !important flags are avoided to allow easy overrides */
+

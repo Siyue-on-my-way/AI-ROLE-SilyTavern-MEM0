@@ -1,0 +1,179 @@
+/* Admin View / Management Console Styles */
+
+:root {
+    --admin-sidebar-width: 260px;
+    --admin-bg-color: var(--SmartThemeBlurTintColor, #1e1e2e);
+    --admin-sidebar-bg: rgba(0, 0, 0, 0.2);
+    --admin-item-hover: rgba(255, 255, 255, 0.08);
+    --admin-item-active: var(--SmartThemeQuoteColor, #89b4fa);
+    --admin-text-color: var(--SmartThemeBodyColor, #cdd6f4);
+}
+
+/* The main overlay container */
+#admin-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--admin-bg-color);
+    z-index: 4900; /* Below docked panels (5000) but above everything else */
+    display: none; /* Hidden by default */
+    flex-direction: row;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+#admin-overlay.active {
+    display: flex;
+}
+
+/* Sidebar */
+#admin-sidebar {
+    width: var(--admin-sidebar-width);
+    height: 100%;
+    background-color: var(--admin-sidebar-bg);
+    border-right: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.1));
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+#admin-sidebar-header {
+    padding: 0 24px 20px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--admin-text-color);
+    border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.05));
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-nav-item {
+    padding: 12px 24px;
+    cursor: pointer;
+    color: var(--admin-text-color);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.95rem;
+    opacity: 0.8;
+    text-decoration: none;
+}
+
+.admin-nav-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.admin-nav-item:hover {
+    background-color: var(--admin-item-hover);
+    opacity: 1;
+}
+
+.admin-nav-item.active {
+    background-color: rgba(var(--SmartThemeQuoteColor), 0.1); /* Fallback might fail if var is hex */
+    background-color: color-mix(in srgb, var(--admin-item-active) 15%, transparent);
+    color: var(--admin-item-active);
+    border-right: 3px solid var(--admin-item-active);
+    opacity: 1;
+    font-weight: 600;
+}
+
+/* Section dividers in sidebar */
+.admin-nav-divider {
+    height: 1px;
+    background-color: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.05));
+    margin: 10px 24px;
+}
+
+.admin-nav-label {
+    padding: 8px 24px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.5;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+/* Content Area Placeholder */
+#admin-content-area {
+    flex-grow: 1;
+    height: 100%;
+    position: relative;
+    overflow: hidden; /* Panels will scroll themselves */
+}
+
+/* Docking Override Classes */
+/* These classes are applied to existing panels to force them into the content area */
+
+.docked-to-admin {
+    position: fixed !important;
+    top: 0 !important;
+    left: var(--admin-sidebar-width) !important;
+    width: calc(100vw - var(--admin-sidebar-width)) !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    z-index: 5000 !important; /* Above overlay */
+    display: flex !important; /* Most panels are flex containers */
+    flex-direction: column !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    background-color: transparent !important; /* Let background show through or panel bg */
+}
+
+/* Specific tweaks for docked panels to look "flat" */
+.docked-to-admin .drawer-header,
+.docked-to-admin .inline-drawer-header,
+.docked-to-admin .drag-grabber {
+    display: none !important; /* Hide original drag handles and headers if redundant */
+}
+
+/* Fix scrolling in docked panels */
+.docked-to-admin.scrollable {
+    overflow-y: auto !important;
+}
+
+/* Special handling for User Settings Block */
+#user-settings-block.docked-to-admin {
+    background-color: var(--SmartThemeBlurTintColor);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Special handling for Extensions */
+#extensions_settings.docked-to-admin, 
+#extensions_settings2.docked-to-admin {
+    background-color: var(--SmartThemeBlurTintColor);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Hide the toggle button when in admin mode? No, we might want it. */
+
+/* Button in top bar to enter admin mode */
+#admin-mode-trigger {
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+#admin-mode-trigger:hover {
+    opacity: 1;
+}
+

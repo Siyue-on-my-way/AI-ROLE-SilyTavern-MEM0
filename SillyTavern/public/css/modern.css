@@ -1,0 +1,220 @@
+/* 
+ * Modern Minimalist Theme for SillyTavern
+ * Based on Catppuccin Mocha Color Palette
+ * Implements "De-clutter, Whitespace, Hierarchy" principles
+ */
+
+:root {
+    /* --- 1. Color Palette (Catppuccin Mocha) --- */
+    --ctp-base: #1e1e2e;
+    --ctp-mantle: #181825;
+    --ctp-crust: #11111b;
+    --ctp-surface0: #313244;
+    --ctp-surface1: #45475a;
+    --ctp-surface2: #585b70;
+    --ctp-text: #cdd6f4;
+    --ctp-subtext0: #a6adc8;
+    --ctp-subtext1: #bac2de;
+    --ctp-overlay0: #6c7086;
+    --ctp-blue: #89b4fa;
+    --ctp-lavender: #b4befe;
+    --ctp-red: #f38ba8;
+    --ctp-green: #a6e3a1;
+    --ctp-yellow: #f9e2af;
+
+    /* --- 2. Variable Overrides --- */
+    
+    /* Backgrounds */
+    --SmartThemeBlurTintColor: var(--ctp-base) !important;       /* Main background */
+    --SmartThemeChatTintColor: var(--ctp-base) !important;       /* Chat area background */
+    --SmartThemeBodyColor: var(--ctp-text) !important;           /* Default text color */
+    
+    /* Secondary & Accents */
+    --SmartThemeEmColor: var(--ctp-subtext0) !important;         /* Muted text */
+    --SmartThemeQuoteColor: var(--ctp-blue) !important;          /* Links / Quotes / Accents */
+    --SmartThemeBorderColor: var(--ctp-surface0) !important;     /* Borders */
+    
+    /* UI Components */
+    --glass-bg: rgba(30, 30, 46, 0.85);                          /* Glassmorphism background */
+    --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* Typography */
+    --mainFontFamily: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
+    --fontScale: 1.05 !important;
+    --lineHeight: 1.6;
+
+    /* Spacing & Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+}
+
+/* --- 3. Global Resets --- */
+
+body {
+    background-color: var(--ctp-base) !important;
+    color: var(--ctp-text) !important;
+    font-family: var(--mainFontFamily);
+    line-height: var(--lineHeight);
+}
+
+/* Smooth Transitions */
+button, a, input, textarea, .mes, .avatar img {
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Scrollbar Modernization */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--ctp-surface1);
+    border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ctp-surface2);
+}
+
+/* --- 4. Chat Bubbles (Phase 2) --- */
+
+/* Message Container */
+.mes {
+    padding: var(--spacing-md) var(--spacing-lg) !important;
+    margin-bottom: var(--spacing-md) !important;
+    border: none !important;
+    background: transparent !important; /* Bubbles handle background, not the row */
+}
+
+/* Avatar - Circular & Separated */
+.mes .avatar {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    margin-right: var(--spacing-md) !important;
+}
+.mes .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Message Text Bubble */
+.mes_text {
+    background-color: var(--ctp-surface0);
+    padding: var(--spacing-md) !important;
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    color: var(--ctp-text);
+    position: relative;
+    max-width: 90%;
+}
+
+/* User Message Specifics */
+.mes[is_user="true"] .mes_text {
+    background-color: var(--ctp-surface1); /* Slightly lighter/different for user */
+    border-bottom-right-radius: 2px; /* Chat bubble aesthetic */
+}
+
+/* AI Message Specifics */
+.mes[is_user="false"] .mes_text {
+    background-color: var(--ctp-surface0);
+    border-bottom-left-radius: 2px;
+}
+
+/* De-clutter: Hide Name & Time by default, show on hover */
+.mes .ch_name {
+    opacity: 0.6;
+    font-size: 0.85em;
+    margin-bottom: var(--spacing-xs) !important;
+    color: var(--ctp-subtext0);
+}
+/* Optional: Hide timestamps until hover? Keeping them visible but muted for now */
+
+/* --- 5. Input Area (Phase 3) --- */
+
+#send_form {
+    background: transparent !important; /* Floating look */
+    padding: var(--spacing-md) !important;
+    border-top: none !important;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+#send_textarea {
+    background-color: var(--ctp-surface0) !important;
+    border: 1px solid var(--ctp-surface1) !important;
+    border-radius: var(--radius-lg) !important;
+    color: var(--ctp-text) !important;
+    padding: 12px 16px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#send_textarea:focus {
+    outline: none;
+    border-color: var(--ctp-blue) !important;
+    box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.3);
+}
+
+/* Send Button Modernization */
+#send_but {
+    border-radius: 50% !important;
+    width: 40px;
+    height: 40px;
+    background-color: var(--ctp-blue) !important;
+    color: var(--ctp-crust) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(137, 180, 250, 0.4);
+}
+#send_but:hover {
+    transform: scale(1.05);
+    background-color: var(--ctp-lavender) !important;
+}
+
+/* --- 6. Top Bar De-clutter (Phase 3) --- */
+
+/* Make top bar distinct */
+#top-bar {
+    background-color: rgba(30, 30, 46, 0.9) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--ctp-surface0);
+    height: 50px !important;
+    padding: 0 var(--spacing-md) !important;
+}
+
+/* Hide non-essential icons or make them subtle */
+/* This is a delicate balance; we start by lowering opacity */
+.drawer-icon {
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.drawer-icon:hover {
+    opacity: 1;
+    color: var(--ctp-blue);
+}
+
+/* --- 7. Sidebar (Drawers) --- */
+.drawer-content {
+    background-color: var(--ctp-mantle) !important;
+    border-right: 1px solid var(--ctp-surface0);
+}
+
+/* Headers in settings */
+.inline-drawer-header, .drawer-header {
+    background-color: var(--ctp-crust) !important;
+    color: var(--ctp-subtext1) !important;
+    border-bottom: 1px solid var(--ctp-surface0);
+}
+

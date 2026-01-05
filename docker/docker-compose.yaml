@@ -1,5 +1,7 @@
 version: '3.8'
 
+name: ai-role-chat
+
 services:
   ai-role-sillytavern:
     build:
