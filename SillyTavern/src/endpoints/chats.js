@@ -165,6 +165,124 @@ function pickMem0MessagesFromChat(chatData, lastSavedMarker) {
         .filter(Boolean);
 }
 
+function extractLLMTextFromChats(json) {
+    if (!json) return '';
+    if (json.choices?.[0]?.message?.content) {
+        return json.choices[0].message.content;
+    }
+    if (Array.isArray(json.content) && json.content[0]?.text) {
+        return json.content[0].text;
+    }
+    if (json.completion) {
+        return json.completion;
+    }
+    if (json.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return json.candidates[0].content.parts[0].text;
+    }
+    if (json.completions?.[0]?.data?.text) {
+        return json.completions[0].data.text;
+    }
+    if (json.completions?.[0]?.text) {
+        return json.completions[0].text;
+    }
+    if (json.generatedText) {
+        return json.generatedText;
+    }
+    return '';
+}
+
+function calculateRelationshipStage(score) {
+    if (score >= 900) return 'level_5';
+    if (score >= 600) return 'level_4';
+    if (score >= 300) return 'level_3';
+    if (score >= 100) return 'level_2';
+    return 'level_1';
+}
+
+async function evaluateSentiment(request, messages, archetype, cacheKey) {
+    try {
+        if (!global.activeLLMConfigs || !global.activeLLMConfigs[cacheKey]) {
+            console.info('No cached LLM configuration found for intimacy evaluation.');
+            return 0;
+        }
+        const cached = global.activeLLMConfigs[cacheKey];
+
+        const formattedDialogue = messages.map(m => `${m.role === 'user' ? 'User' : 'Companion'}: ${m.content}`).join('\n');
+
+        const prompt = `You are an expert psychological annotator analyzing a dialogue exchange between a User and their Companion (who acts as a ${archetype === 'lover' ? 'romantic lover' : (archetype === 'teacher' ? 'mentor/teacher' : 'close friend')}).
+Analyze the following new dialogue exchange and rate its impact on the emotional connection and intimacy of their relationship.
+Rating guidelines:
+- -5 to -1: Cold, hostile, distant, or relationship-damaging behavior (e.g. arguing, insulting, avoiding).
+- 0: Neutral, mundane, routine exchange (e.g. greeting, trivial facts, no emotional variance).
+- 1 to 5: Positive, polite, warm, or friendly conversation.
+- 6 to 10: Deepening connection, vulnerability, sharing secrets, or showing clear romantic/platonic affection.
+- 11 to 15: Intense intimacy, confessions of deep love/trust, milestone achievements, or highly emotional breakthroughs.
+
+Dialogue exchange:
+${formattedDialogue}
+
+Respond with ONLY a single integer number between -5 and 15, with no explanations, no prefix, and no additional text. Just the number.`;
+
+        const rewriteBody = {
+            ...cached.body,
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            system: undefined,
+            claude_use_sysprompt: false,
+            custom_prompt_post_processing: undefined,
+            stream: false,
+            max_tokens: 10,
+            temperature: 0.1,
+            top_p: 1.0,
+            stop: undefined,
+            json_schema: undefined,
+            type: 'quiet', // Prevent infinite recursion
+        };
+
+        const protocol = cached.secure ? 'https' : 'http';
+        const localPort = cached.localPort;
+        if (!localPort) return 0;
+
+        const localUrl = `${protocol}://127.0.0.1:${localPort}/api/backends/chat-completions/generate`;
+
+        const headers = { ...cached.headers };
+        headers['content-type'] = 'application/json';
+        delete headers['host'];
+        delete headers['content-length'];
+
+        const https = await import('node:https');
+        const agent = protocol === 'https' ? new https.Agent({ rejectUnauthorized: false }) : undefined;
+
+        console.info('Evaluating dialogue sentiment via loopback...');
+        const res = await fetch(localUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(rewriteBody),
+            agent,
+        });
+
+        if (!res.ok) return 0;
+        const json = await res.json();
+
+        const replyText = extractLLMTextFromChats(json);
+        const match = replyText.match(/-?\d+/);
+        if (match) {
+            const score = parseInt(match[0], 10);
+            if (!isNaN(score) && score >= -5 && score <= 15) {
+                console.info(`Evaluated intimacy score change: ${score >= 0 ? '+' : ''}${score}`);
+                return score;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to evaluate sentiment:', e);
+    }
+    return 0;
+}
+
 function getMem0WriteMarker(chatData) {
     const last = Array.isArray(chatData)
         ? [...chatData].reverse().find(x => x && typeof x === 'object' && typeof x.mes === 'string' && x.mes.trim() && !x.is_system)
@@ -226,11 +344,41 @@ async function maybeWriteMem0FromChatSave(request, chatData) {
 
         if (res.ok) {
             const nextMarker = marker || crypto.createHash('sha256').update(JSON.stringify(messages)).digest('hex');
+
+            const isGroup = chatData?.[0]?.is_group;
+            const charName = String(request?.body?.character_name || header?.character_name || '');
+            const groupChatId = isGroup ? String(request?.body?.id || '') : '';
+            const cacheKey = groupChatId ? `groupChat:${groupChatId}` : (charName ? `char:${charName}` : 'default');
+
+            const scoreChange = await evaluateSentiment(request, messages, header?.chat_metadata?.role_archetype || 'lover', cacheKey);
+
             if (header) {
                 if (!header.chat_metadata || typeof header.chat_metadata !== 'object') {
                     header.chat_metadata = {};
                 }
                 header.chat_metadata.mem0_last_saved_marker = nextMarker;
+
+                const oldScore = header.chat_metadata.intimacy_score || 0;
+                const newScore = Math.max(0, Math.min(1000, oldScore + scoreChange));
+                header.chat_metadata.intimacy_score = newScore;
+
+                const oldStage = header.chat_metadata.relationship_stage || 'level_1';
+                const newStage = calculateRelationshipStage(newScore);
+                header.chat_metadata.relationship_stage = newStage;
+
+                if (oldStage !== newStage) {
+                    console.info(`[Intimacy Upgrade] Relationship stage upgraded from ${oldStage} to ${newStage}!`);
+                    if (!Array.isArray(header.chat_metadata.unlocked_milestones)) {
+                        header.chat_metadata.unlocked_milestones = [];
+                    }
+                    if (!header.chat_metadata.unlocked_milestones.includes(newStage)) {
+                        header.chat_metadata.unlocked_milestones.push(newStage);
+                    }
+                }
+
+                // Update the memory-side cache
+                global.activeChatMetadata = global.activeChatMetadata || {};
+                global.activeChatMetadata[cacheKey] = header.chat_metadata;
             } else if (lastMessage) {
                 if (!lastMessage.extra || typeof lastMessage.extra !== 'object') {
                     lastMessage.extra = {};
@@ -238,7 +386,8 @@ async function maybeWriteMem0FromChatSave(request, chatData) {
                 lastMessage.extra.mem0_last_saved_marker = nextMarker;
             }
         }
-    } catch {
+    } catch (err) {
+        console.error('Failed in mem0 write or sentiment analysis:', err);
         return;
     } finally {
         clearTimeout(timeout);

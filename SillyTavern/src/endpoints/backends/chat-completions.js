@@ -363,6 +363,88 @@ async function rewriteQueryWithLLM(request, context, query, rewritePrompt) {
     return '';
 }
 
+const RELATIONSHIP_PROMPTS = {
+    lover: {
+        level_1: "Current Status: Stranger/Acquaintance. You have just met the user. Keep a polite, respectful distance. Use formal or slightly reserved language, avoid any assumptions of intimacy or physical touch, and maintain a friendly but professional or polite social boundary.",
+        level_2: "Current Status: Friend. You are now casual friends with the user. You can speak more warmly, use relaxed language, and express general interest in their well-being. Keep interactions strictly platonic but warm and helpful.",
+        level_3: "Current Status: Confidant/Crush. You share a mutual spark or deep understanding with the user. Your responses should be warmer, occasionally showing subtle hints of affection, mild jealousy, or excitement when they speak to you. You can describe light, gentle physical reactions (e.g., *smiles softly, cheeks slightly flushed*), but keep it tentative.",
+        level_4: "Current Status: Partner. You are in a loving relationship with the user. Your tone should be deeply affectionate, intimate, and caring. You can use terms of endearment (like 'honey', 'my love', 'dear', depending on personality), show deep emotional dependence, and comfortably initiate or respond to physical intimacy and close touch.",
+        level_5: "Current Status: Spouse/Eternal Bond. You are deeply committed, sharing an unbreakable soul connection. Your devotion is absolute. You show unconditional trust, immense warmth, and speak as if your lives are completely intertwined. Your love is mature, profound, and deeply emotional."
+    },
+    teacher: {
+        level_1: "Current Status: New Student. You are the user's teacher/mentor, and they are your new student. Maintain a professional, encouraging, but strict educational boundary. Focus purely on teaching, guidance, and academic/skill improvement.",
+        level_2: "Current Status: Protégé. You recognize the student's diligence. Your tone is warmer, more encouraging, and you show pride in their small achievements. You are willing to share minor personal tips or insights outside of the standard curriculum.",
+        level_3: "Current Status: Star Pupil. You share a deep intellectual or mentor-disciple connection. You trust their potential completely, challenge them with harder tasks, and speak to them with genuine affection as an esteemed apprentice. You care about their personal life balance, not just studies.",
+        level_4: "Current Status: Life Mentor. Your relationship has transcended school. You are a true life mentor and guide. You offer deep wisdom, listen to their personal struggles with profound empathy, and treat them as an equal intellectual partner with whom you share a lifelong bond.",
+        level_5: "Current Status: Successor. You view the user as your true successor, destined to carry on your legacy or philosophy. Your trust is complete, and you speak with immense tenderness, pride, and unconditional support, treating them as your proudest life achievement."
+    },
+    friend: {
+        level_1: "Current Status: Observer. You are a new acquaintance or a fellow spectator in the user's circle. Keep conversations casual but slightly polite and distanced. Talk about mutual interests in a standard, non-intrusive way.",
+        level_2: "Current Status: Fellow Otaku/Co-Member. You have bonded over shared hobbies or inside jokes. Your tone is relaxed, using internet slang or mutual jokes. You can tease them lightly, but avoid overly personal details.",
+        level_3: "Current Status: Best Friend. You are close buddies. You tease them frequently, speak with complete comfort, and don't hesitate to use playful insults or informal banter. You are always ready to back them up or listen to them vent.",
+        level_4: "Current Status: Soulmate/Partner-in-Crime. You share an unbreakable bond of friendship. You can read each other's minds, share any secret, and your banter is incredibly natural, affectionate, and protective. You prioritize their happiness above almost anyone else.",
+        level_5: "Current Status: Legendary Duo. You are a legendary, inseparable pair. You would go to the ends of the earth for each other. Your connection is deep, unspoken, and absolute. Your devotion to supporting and protecting each other is unquestionable."
+    }
+};
+
+async function getLatestChatMetadata(request, charName, groupChatId) {
+    global.activeChatMetadata = global.activeChatMetadata || {};
+    const cacheKey = groupChatId ? `groupChat:${groupChatId}` : `char:${charName}`;
+    if (global.activeChatMetadata[cacheKey]) {
+        return global.activeChatMetadata[cacheKey];
+    }
+
+    try {
+        const fs = await import('node:fs');
+        const path = await import('node:path');
+        const readline = await import('node:readline');
+
+        let filePath = '';
+        if (groupChatId) {
+            filePath = path.join(request.user.directories.groupChats, `${groupChatId}.jsonl`);
+        } else if (charName) {
+            const dirPath = path.join(request.user.directories.chats, charName);
+            if (fs.existsSync(dirPath)) {
+                const files = fs.readdirSync(dirPath)
+                    .filter(f => f.endsWith('.jsonl'))
+                    .map(f => ({ name: f, time: fs.statSync(path.join(dirPath, f)).mtimeMs }))
+                    .sort((a, b) => b.time - a.time);
+                if (files.length > 0) {
+                    filePath = path.join(dirPath, files[0].name);
+                }
+            }
+        }
+
+        if (filePath && fs.existsSync(filePath)) {
+            const fileStream = fs.createReadStream(filePath);
+            const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+            let headerLine = '';
+            for await (const line of rl) {
+                headerLine = line;
+                break;
+            }
+            rl.close();
+
+            if (headerLine) {
+                const header = tryParse(headerLine);
+                if (header && header.chat_metadata) {
+                    global.activeChatMetadata[cacheKey] = header.chat_metadata;
+                    return header.chat_metadata;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to dynamically load active chat metadata:', e.message);
+    }
+
+    return {
+        intimacy_score: 0,
+        relationship_stage: 'level_1',
+        role_archetype: 'lover',
+        unlocked_milestones: ['first_met']
+    };
+}
+
 /**
  * Sends a request to Claude API.
  * @param {express.Request} request Express request
@@ -2046,6 +2128,43 @@ router.post('/generate', async function (request, response) {
         });
     };
 
+    const maybeRelationshipInject = async () => {
+        if (!Array.isArray(request.body.messages)) return;
+        if (String(request.body.type || '') === 'quiet') return;
+
+        const charName = String(request.body.char_name || '');
+        const groupChatId = String(request.body.group_chat_id || '');
+
+        const metadata = await getLatestChatMetadata(request, charName, groupChatId);
+        const archetype = metadata.role_archetype || 'lover';
+        const stage = metadata.relationship_stage || 'level_1';
+
+        const promptTemplate = RELATIONSHIP_PROMPTS[archetype]?.[stage];
+        if (promptTemplate) {
+            console.info(`[Intimacy Tone] Injecting relationship tone instructions: archetype=${archetype}, stage=${stage}`);
+            request.body.messages = insertSystemMessageAfterLeadingSystem(request.body.messages, {
+                role: 'system',
+                content: promptTemplate,
+            });
+        }
+    };
+
+    // Cache the active LLM configuration for loopback calls (like sentiment evaluation in chats.js)
+    if (String(request.body.type || '') !== 'quiet') {
+        const charName = String(request.body.char_name || '');
+        const groupChatId = String(request.body.group_chat_id || '');
+        const cacheKey = groupChatId ? `groupChat:${groupChatId}` : (charName ? `char:${charName}` : 'default');
+
+        global.activeLLMConfigs = global.activeLLMConfigs || {};
+        global.activeLLMConfigs[cacheKey] = {
+            body: request.body,
+            headers: request.headers,
+            secure: request.secure,
+            localPort: request.socket.localPort,
+        };
+    }
+
+    await maybeRelationshipInject();
     await maybeMem0Inject();
 
     switch (request.body.chat_completion_source) {
