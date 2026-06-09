@@ -1,0 +1,177 @@
+/* Intimacy & Relationship Growth System Styles */
+
+#relationshipDrawerIcon {
+    cursor: pointer;
+    transition: color 0.5s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s ease;
+}
+
+#relationshipDrawerIcon.closedIcon {
+    /* Base color when closed */
+}
+
+#relationshipDrawerIcon:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 6px rgba(255, 94, 126, 0.8));
+}
+
+/* Pulsing heartbeat animation for icon */
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    15% { transform: scale(1.25); }
+    30% { transform: scale(1); }
+    45% { transform: scale(1.15); }
+    70% { transform: scale(1); }
+    100% { transform: scale(1); }
+}
+
+.heart-pulsing {
+    animation: heartbeat 1.2s infinite ease-in-out;
+}
+
+/* Unlocked Milestone Badges */
+.milestone-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 8px 10px;
+    border-left: 3px solid #ccc;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.milestone-badge.unlocked-level_1 { border-left-color: #8a8a8a; }
+.milestone-badge.unlocked-level_2 { border-left-color: #5bc0be; }
+.milestone-badge.unlocked-level_3 { border-left-color: #ff9f1c; }
+.milestone-badge.unlocked-level_4 { border-left-color: #ff5e7e; }
+.milestone-badge.unlocked-level_5 { border-left-color: #e0aaff; box-shadow: 0 0 8px rgba(224, 170, 255, 0.2); }
+
+.milestone-icon {
+    font-size: 14px;
+}
+
+/* Celebration Level-Up Overlay */
+.celebration-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+    backdrop-filter: blur(10px);
+}
+
+.celebration-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.celebration-card {
+    background: linear-gradient(135deg, #1e1e24 0%, #121214 100%);
+    border: 2px solid #ff5e7e;
+    border-radius: 20px;
+    padding: 30px;
+    width: 420px;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(255, 94, 126, 0.3);
+    transform: scale(0.7) rotate(-5deg);
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.celebration-overlay.active .celebration-card {
+    transform: scale(1) rotate(0deg);
+}
+
+.celebration-heart {
+    font-size: 60px;
+    color: #ff5e7e;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 10px rgba(255,94,126,0.6));
+    animation: heartbeat 1s infinite alternate;
+}
+
+.celebration-title {
+    font-family: 'Noto Sans', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
+    color: #fff;
+    margin: 0 0 10px 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.celebration-subtitle {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    margin: 0 0 20px 0;
+}
+
+.celebration-level-badge {
+    display: inline-block;
+    background: rgba(255, 94, 126, 0.15);
+    color: #ff8fa3;
+    border: 1px solid rgba(255, 94, 126, 0.4);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 25px;
+    box-shadow: 0 0 10px rgba(255,94,126,0.1);
+}
+
+.celebration-desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    margin: 0 0 30px 0;
+    line-height: 1.5;
+}
+
+.celebration-btn {
+    background: linear-gradient(135deg, #ff5e7e 0%, #ff8fa3 100%);
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255,94,126,0.4);
+    transition: all 0.3s ease;
+}
+
+.celebration-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255,94,126,0.6);
+}
+
+/* Floating heart particles */
+.floating-heart {
+    position: absolute;
+    color: #ff5e7e;
+    font-size: 18px;
+    pointer-events: none;
+    z-index: 100000;
+    animation: floatUp 2s ease-out forwards;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+    15% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-120px) translateX(var(--drift)) scale(1.2);
+        opacity: 0;
+    }
+}

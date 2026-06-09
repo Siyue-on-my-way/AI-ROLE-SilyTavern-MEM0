@@ -46,6 +46,7 @@
     <link rel="stylesheet" type="text/css" href="css/xiaojiuguan-modern-pro.css">
     <link rel="stylesheet" type="text/css" href="css/admin-view.css">
     <link rel="stylesheet" type="text/css" href="css/user.css">
+    <link rel="stylesheet" type="text/css" href="css/intimacy.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Scripts are loaded at the end of the body to improve page load speed -->
 </head>
@@ -2330,9 +2331,65 @@
                         <div class="range-block-title">保存选择</div>
                         <button class="menu_button disabled" id="mem0_save_config" type="button" disabled>Save</button>
                     </div>
-                    
+
                     <div id="llm_config_status" class="margin-top-5 text-sm"></div>
                 </div>
+            </div>
+        </div>
+        <div id="relationship-button" class="drawer">
+            <div class="drawer-toggle drawer-header">
+                <div id="relationshipDrawerIcon" class="drawer-icon fa-solid fa-heart fa-fw closedIcon" title="羁绊与养成手账" style="color: #ff5e7e;"></div>
+            </div>
+            <div id="relationship-panel" class="drawer-content closedDrawer" style="width: 320px;">
+                <div id="relationshipHeader" class="fa-solid fa-grip drag-grabber"></div>
+                <h3 class="margin0" style="color: #ff5e7e; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-heart-circle-check"></i> 羁绊与养成手账
+                </h3>
+                <div class="flex-container flexFlowColumn margin-top-5" style="gap: 15px;">
+                    <!-- 路线选择 -->
+                    <div class="flex-container flexFlowColumn">
+                        <div class="range-block-title">养成定位 (Archetype)</div>
+                        <select id="relationship_archetype_select" class="text_pole">
+                            <option value="lover">恋人 (Romantic Lover)</option>
+                            <option value="teacher">导师 (Mentor/Teacher)</option>
+                            <option value="friend">损友/死党 (Close Friend)</option>
+                        </select>
+                    </div>
+
+                    <!-- 羁绊成长进度 -->
+                    <div class="flex-container flexFlowColumn" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,94,126,0.2);">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px;">
+                            <span id="relationship_stage_name" style="font-weight: bold; color: #ff8fa3;">加载中...</span>
+                            <span id="relationship_score_text" style="color: rgba(255,255,255,0.7);">0 / 1000</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); height: 10px; border-radius: 5px; overflow: hidden; position: relative;">
+                            <div id="relationship_progress_bar" style="background: linear-gradient(90deg, #ff5e7e, #ff8fa3); width: 0%; height: 100%; transition: width 0.8s ease;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 解锁里程碑 -->
+                    <div class="flex-container flexFlowColumn" style="gap: 8px;">
+                        <div class="range-block-title"><i class="fa-solid fa-award"></i> 已解锁的里程碑</div>
+                        <div id="relationship_milestones_list" class="flex-container flexFlowColumn" style="gap: 6px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+                            <!-- Milestones dynamically injected -->
+                        </div>
+                    </div>
+
+                    <!-- 保存修改 -->
+                    <button class="menu_button" id="relationship_save_btn" type="button" style="background: linear-gradient(135deg, #ff5e7e 0%, #ff8fa3 100%); color: white; border: none;">保存定位设定</button>
+                    <div id="relationship_status" style="font-size: 12px; text-align: center; color: #ff8fa3;"></div>
+                </div>
+            </div>
+        </div>
+        <!-- 升级庆祝弹窗 -->
+        <div id="celebration-overlay" class="celebration-overlay">
+            <div class="celebration-card">
+                <div class="celebration-heart"><i class="fa-solid fa-heart-pulse"></i></div>
+                <h2 class="celebration-title">羁绊突破！</h2>
+                <p class="celebration-subtitle">你们的关系升温到了一个全新的台阶</p>
+                <div id="celebration-level-badge" class="celebration-level-badge">Lvl 2: 熟稔</div>
+                <p id="celebration-desc" class="celebration-desc">Ta 似乎对你更加信任了，开始愿意向你展现出更多真实的自我和亲昵的语气。继续用真心温暖 Ta 吧！</p>
+                <button id="celebration-close-btn" class="celebration-btn">携手前行</button>
             </div>
         </div>
         <div id="sys-settings-button" class="drawer">
@@ -8016,6 +8073,7 @@
     <script type="module" src="scripts/i18n.js"></script>
     <script type="module" src="script.js"></script>
     <script type="module" src="scripts/llm-config.js"></script>
+    <script type="module" src="scripts/relationship.js"></script>
     <script type="module" src="scripts/admin-view.js"></script>
     <script>
         window.addEventListener('load', (event) => {
