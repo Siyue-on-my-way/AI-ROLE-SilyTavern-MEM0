@@ -5,8 +5,11 @@ import {
     eventSource,
     event_types,
     saveSettingsDebounced,
+    chat,
+    Generate,
 } from '../script.js';
 import { selected_group, groups } from './group-chats.js';
+import { timestampToMoment } from './utils.js';
 
 // DOM elements
 const relationshipDrawerBtn = document.getElementById('relationship-button');
@@ -204,6 +207,55 @@ function spawnHeartParticle() {
     setTimeout(() => heart.remove(), 3000);
 }
 
+async function checkAndTriggerProactiveMessage() {
+    const { is_group, charName, groupChatId } = getActiveIdentifiers();
+    if (is_group || !charName) return; // Only trigger for 1-on-1 chats
+
+    const cacheKey = groupChatId ? `groupChat:${groupChatId}` : `char:${charName}`;
+    let metadata = null;
+    if (window.activeChatMetadata && window.activeChatMetadata[cacheKey]) {
+        metadata = window.activeChatMetadata[cacheKey];
+    } else if (chat_metadata) {
+        metadata = chat_metadata;
+    }
+
+    if (!metadata) return;
+
+    const stage = metadata.relationship_stage || 'level_1';
+    const allowedStages = ['level_3', 'level_4', 'level_5'];
+    if (!allowedStages.includes(stage)) return;
+
+    if (!chat || chat.length === 0) return;
+    const lastMessage = chat[chat.length - 1];
+    if (!lastMessage || !lastMessage.send_date) return;
+
+    // Safety guard: only trigger if the last message was from the User.
+    if (!lastMessage.is_user) return;
+
+    const lastMoment = timestampToMoment(lastMessage.send_date);
+    if (!lastMoment || !lastMoment.isValid()) return;
+
+    const now = moment();
+    const hoursElapsed = now.diff(lastMoment, 'hours');
+
+    // Default threshold: 12 hours
+    if (hoursElapsed >= 12) {
+        console.info(`Proactive Offline Messaging triggered: last message was ${hoursElapsed} hours ago, relationship stage is ${stage}.`);
+
+        const archetype = metadata.role_archetype || 'lover';
+        const stageLabels = STAGE_LABELS[archetype] || {};
+        const currentStageName = stageLabels[stage] || stage;
+
+        const promptInstruction = `[System: The user has just returned to chat with you after a long offline period of ${hoursElapsed} hours. Your relationship stage is "${currentStageName}" (${archetype} archetype). Please proactively greet them, show care, or whisper something intimate/warm fitting your relationship stage without referencing system instructions.]`;
+
+        try {
+            await Generate('normal', { quiet_prompt: promptInstruction, quietToLoud: true });
+        } catch (e) {
+            console.error('Failed to generate proactive companion message:', e);
+        }
+    }
+}
+
 async function refreshRelationshipData() {
     const { is_group, charName, groupChatId } = getActiveIdentifiers();
     if (!charName && !groupChatId) return;
@@ -306,6 +358,9 @@ function initRelationshipUI() {
         previousStage = null;
         previousScore = null;
         refreshRelationshipData();
+
+        // Execute offline check after data refresh and rendering completes
+        setTimeout(checkAndTriggerProactiveMessage, 1200);
     });
 
     eventSource.on(event_types.MESSAGE_RECEIVED, () => {
