@@ -269,6 +269,100 @@ async function searchMem0(request, query) {
     }
 }
 
+function extractLLMText(json) {
+    if (!json) return '';
+    if (json.choices?.[0]?.message?.content) {
+        return json.choices[0].message.content;
+    }
+    if (Array.isArray(json.content) && json.content[0]?.text) {
+        return json.content[0].text;
+    }
+    if (json.completion) {
+        return json.completion;
+    }
+    if (json.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return json.candidates[0].content.parts[0].text;
+    }
+    if (json.completions?.[0]?.data?.text) {
+        return json.completions[0].data.text;
+    }
+    if (json.completions?.[0]?.text) {
+        return json.completions[0].text;
+    }
+    if (json.generatedText) {
+        return json.generatedText;
+    }
+    return '';
+}
+
+async function rewriteQueryWithLLM(request, context, query, rewritePrompt) {
+    try {
+        const promptText = rewritePrompt
+            .replace('{{context}}', context)
+            .replace('{{query}}', query);
+
+        const rewriteBody = {
+            ...request.body,
+            messages: [
+                {
+                    role: 'user',
+                    content: promptText
+                }
+            ],
+            system: undefined,
+            claude_use_sysprompt: false,
+            custom_prompt_post_processing: undefined,
+            stream: false,
+            max_tokens: 150,
+            temperature: 0.1,
+            top_p: 1.0,
+            stop: undefined,
+            json_schema: undefined,
+            type: 'quiet', // Prevent infinite recursion
+        };
+
+        const protocol = request.secure ? 'https' : 'http';
+        const localPort = request.socket.localPort;
+        if (!localPort) {
+            console.warn('Cannot perform loopback request: socket localPort is missing.');
+            return '';
+        }
+
+        const localUrl = `${protocol}://127.0.0.1:${localPort}/api/backends/chat-completions/generate`;
+
+        const headers = { ...request.headers };
+        headers['content-type'] = 'application/json';
+        delete headers['host'];
+        delete headers['content-length'];
+
+        const https = await import('node:https');
+        const agent = protocol === 'https' ? new https.Agent({ rejectUnauthorized: false }) : undefined;
+
+        console.info('Performing mem0 LLM query rewrite via loopback...');
+        const res = await fetch(localUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(rewriteBody),
+            agent,
+        });
+
+        if (!res.ok) {
+            console.warn('Mem0 LLM query rewrite request failed:', res.status, res.statusText);
+            return '';
+        }
+
+        const json = await res.json();
+        const rewritten = extractLLMText(json);
+        if (rewritten) {
+            console.info('Mem0 LLM Query Rewritten to:', rewritten.trim());
+            return rewritten.trim();
+        }
+    } catch (error) {
+        console.error('Error during mem0 LLM query rewrite:', error);
+    }
+    return '';
+}
+
 /**
  * Sends a request to Claude API.
  * @param {express.Request} request Express request
@@ -1926,19 +2020,17 @@ router.post('/generate', async function (request, response) {
                 }
 
                 // Fallback 2: LLM Rewrite (Query 3)
-                // This is a placeholder for LLM rewrite logic.
-                // Implementing this requires re-using the current LLM connection to generate a new query.
-                // Given the complexity of re-entrant LLM calls within the backend proxy,
-                // and the need to parse the response reliably, this is left as a future enhancement
-                // once the core fallback proves insufficient.
-                //
-                // The configuration (rewriteEnabled, rewritePrompt) is already in place.
-                /*
                 const settings = getMem0Settings(request);
                 if ((!Array.isArray(results) || results.length === 0) && settings.rewriteEnabled) {
-                    // TODO: Implement rewriteQueryWithLLM(request, context, query, settings.rewritePrompt)
+                    try {
+                        const rewrittenQuery = await rewriteQueryWithLLM(request, context, query, settings.rewritePrompt);
+                        if (rewrittenQuery) {
+                            results = await searchMem0(request, rewrittenQuery);
+                        }
+                    } catch (error) {
+                        console.error('LLM Query Rewrite failed:', error);
+                    }
                 }
-                */
             }
         }
 

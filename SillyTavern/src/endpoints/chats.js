@@ -55,6 +55,31 @@ function getMem0Settings(request) {
     };
 }
 
+function ensureIntimacyMetadata(chatData) {
+    if (!Array.isArray(chatData) || chatData.length === 0) return chatData;
+    const header = chatData[0];
+    if (header && typeof header === 'object') {
+        if (!header.chat_metadata || typeof header.chat_metadata !== 'object') {
+            header.chat_metadata = {};
+        }
+
+        // Initialize relationship metrics if missing
+        if (typeof header.chat_metadata.intimacy_score !== 'number') {
+            header.chat_metadata.intimacy_score = 0;
+        }
+        if (typeof header.chat_metadata.relationship_stage !== 'string') {
+            header.chat_metadata.relationship_stage = 'level_1';
+        }
+        if (typeof header.chat_metadata.role_archetype !== 'string') {
+            header.chat_metadata.role_archetype = 'lover'; // default fallback archetype
+        }
+        if (!Array.isArray(header.chat_metadata.unlocked_milestones)) {
+            header.chat_metadata.unlocked_milestones = ['first_met'];
+        }
+    }
+    return chatData;
+}
+
 function getMem0IdentityForChatSave(request, chatData) {
     const userId = String(request?.user?.profile?.handle || '');
     if (!userId) return { userId: '', agentId: '' };
@@ -71,12 +96,57 @@ function getMem0IdentityForChatSave(request, chatData) {
     return { userId, agentId };
 }
 
-function pickMem0MessagesFromChat(chatData) {
+function cleanRoleplayMessage(text) {
+    if (!text || typeof text !== 'string') return '';
+
+    // 1. Remove OOC blocks: (OOC: ...) or [OOC: ...]
+    let cleaned = text
+        .replace(/\(\s*(?:ooc|OOC|Ooc)[\s\S]*?\)/gi, '')
+        .replace(/\[\s*(?:ooc|OOC|Ooc)[\s\S]*?\]/gi, '');
+
+    // 2. Remove action blocks: *cries* or *smiles*
+    cleaned = cleaned.replace(/\*[\s\S]*?\*/g, '');
+
+    // 3. Normalize multiple spaces and line breaks
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+    // 4. Check if it's too short or empty
+    if (cleaned.length < 2) return '';
+
+    // Check for typical filler words / pure noise
+    const noisePatterns = [
+        /^[?!)((:;.，。！？；：（）~…\s\d*~-—…]+$/, // only punctuation / digits / spaces / dashes
+        /^(?:哈哈+|好吧|哦|嗯|啊|嘿|呀|哼|哇|喔|呃|嘞|嘛|呢|啦|耶|咯|ok|okay|haha+|yeah|yes|no|oh|hey|ah|um|uh|well|yo|huh)[!?,.，。！？；：~…\s-]*$/i
+    ];
+
+    for (const pattern of noisePatterns) {
+        if (pattern.test(cleaned)) {
+            return '';
+        }
+    }
+
+    return cleaned;
+}
+
+function pickMem0MessagesFromChat(chatData, lastSavedMarker) {
     if (!Array.isArray(chatData)) return [];
     const isGroup = Boolean(chatData?.[0]?.is_group);
-    const items = chatData
-        .filter(x => x && typeof x === 'object' && typeof x.mes === 'string' && x.mes.trim() && !x.is_system)
-        .slice(-6);
+    const validMessages = chatData.filter(x => x && typeof x === 'object' && typeof x.mes === 'string' && x.mes.trim() && !x.is_system);
+
+    let items = [];
+    let foundMarker = false;
+
+    if (lastSavedMarker) {
+        const markerIndex = validMessages.findIndex(m => String(m.send_date || '') === String(lastSavedMarker));
+        if (markerIndex !== -1) {
+            items = validMessages.slice(markerIndex + 1);
+            foundMarker = true;
+        }
+    }
+
+    if (!foundMarker) {
+        items = validMessages.slice(-6);
+    }
 
     return items
         .map(m => {
@@ -84,7 +154,12 @@ function pickMem0MessagesFromChat(chatData) {
             const role = isUser ? 'user' : 'assistant';
             const raw = String(m.mes || '').trim();
             if (!raw) return null;
-            const content = (!isUser && isGroup && m.name) ? `${String(m.name)}: ${raw}` : raw;
+
+            // Apply roleplay noise filtering
+            const cleanedDialogue = cleanRoleplayMessage(raw);
+            if (!cleanedDialogue) return null;
+
+            const content = (!isUser && isGroup && m.name) ? `${String(m.name)}: ${cleanedDialogue}` : cleanedDialogue;
             return { role, content };
         })
         .filter(Boolean);
@@ -105,10 +180,6 @@ async function maybeWriteMem0FromChatSave(request, chatData) {
     const { userId, agentId } = getMem0IdentityForChatSave(request, chatData);
     if (!userId || !agentId) return;
 
-    const messages = pickMem0MessagesFromChat(chatData);
-    if (!messages.length) return;
-
-    const marker = getMem0WriteMarker(chatData);
     const header = chatData?.[0] && typeof chatData[0] === 'object' ? chatData[0] : null;
     const hasHeaderMetadata = header && typeof header.chat_metadata === 'object' && header.chat_metadata;
     const lastMessage = Array.isArray(chatData)
@@ -116,10 +187,16 @@ async function maybeWriteMem0FromChatSave(request, chatData) {
         : null;
     const hasLastExtra = lastMessage && typeof lastMessage.extra === 'object' && lastMessage.extra;
 
-    if (marker) {
-        if (hasHeaderMetadata && header.chat_metadata.mem0_last_saved_marker === marker) return;
-        if (!hasHeaderMetadata && hasLastExtra && lastMessage.extra.mem0_last_saved_marker === marker) return;
-    }
+    const lastSavedMarker = hasHeaderMetadata
+        ? header.chat_metadata.mem0_last_saved_marker
+        : (hasLastExtra ? lastMessage.extra.mem0_last_saved_marker : null);
+
+    const messages = pickMem0MessagesFromChat(chatData, lastSavedMarker);
+    if (!messages.length) return;
+
+    const marker = getMem0WriteMarker(chatData);
+
+    if (marker && lastSavedMarker === marker) return;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), Math.max(0, Number(settings.timeoutMs) || 0));
@@ -584,7 +661,7 @@ export const router = express.Router();
 router.post('/save', validateAvatarUrlMiddleware, async function (request, response) {
     try {
         const directoryName = String(request.body.avatar_url).replace('.png', '');
-        const chatData = request.body.chat;
+        let chatData = request.body.chat;
         const fileName = `${String(request.body.file_name)}.jsonl`;
         const filePath = path.join(request.user.directories.chats, directoryName, sanitize(fileName));
         if (checkIntegrity && !request.body.force) {
@@ -595,6 +672,7 @@ router.post('/save', validateAvatarUrlMiddleware, async function (request, respo
                 return response.status(400).send({ error: 'integrity' });
             }
         }
+        chatData = ensureIntimacyMetadata(chatData);
         await maybeWriteMem0FromChatSave(request, chatData);
         const jsonlData = chatData.map(JSON.stringify).join('\n');
         writeFileAtomicSync(filePath, jsonlData, 'utf8');
@@ -634,7 +712,8 @@ router.post('/get', validateAvatarUrlMiddleware, function (request, response) {
         const lines = data.split('\n');
 
         // Iterate through the array of strings and parse each line as JSON
-        const jsonData = lines.map((l) => { try { return JSON.parse(l); } catch (_) { return; } }).filter(x => x);
+        let jsonData = lines.map((l) => { try { return JSON.parse(l); } catch (_) { return; } }).filter(x => x);
+        jsonData = ensureIntimacyMetadata(jsonData);
         return response.send(jsonData);
     } catch (error) {
         console.error(error);
@@ -895,7 +974,8 @@ router.post('/group/get', (request, response) => {
         const lines = data.split('\n');
 
         // Iterate through the array of strings and parse each line as JSON
-        const jsonData = lines.map(line => tryParse(line)).filter(x => x);
+        let jsonData = lines.map(line => tryParse(line)).filter(x => x);
+        jsonData = ensureIntimacyMetadata(jsonData);
         return response.send(jsonData);
     } else {
         return response.send([]);
@@ -931,11 +1011,51 @@ router.post('/group/save', async (request, response) => {
     }
 
     let chat_data = request.body.chat;
+    chat_data = ensureIntimacyMetadata(chat_data);
     await maybeWriteMem0FromChatSave(request, chat_data);
     let jsonlData = chat_data.map(JSON.stringify).join('\n');
     writeFileAtomicSync(pathToFile, jsonlData, 'utf8');
     getBackupFunction(request.user.profile.handle)(request.user.directories.backups, String(id), jsonlData);
     return response.send({ ok: true });
+});
+
+router.post('/relationship/configure', (request, response) => {
+    try {
+        const { is_group, id, avatar_url, file_name, role_archetype } = request.body;
+        if (!role_archetype) {
+            return response.status(400).send({ error: 'role_archetype is required' });
+        }
+
+        const pathToFolder = is_group
+            ? request.user.directories.groupChats
+            : path.join(request.user.directories.chats, String(avatar_url).replace('.png', ''));
+        const fileNameWithExt = is_group ? `${id}.jsonl` : `${String(file_name)}.jsonl`;
+        const filePath = path.join(pathToFolder, sanitize(fileNameWithExt));
+
+        if (!fs.existsSync(filePath)) {
+            return response.status(404).send({ error: 'Chat file not found' });
+        }
+
+        const data = fs.readFileSync(filePath, 'utf8');
+        const lines = data.split('\n');
+        let chatData = lines.map(line => tryParse(line)).filter(x => x);
+
+        if (chatData.length > 0 && chatData[0] && typeof chatData[0] === 'object') {
+            if (!chatData[0].chat_metadata || typeof chatData[0].chat_metadata !== 'object') {
+                chatData[0].chat_metadata = {};
+            }
+            chatData[0].chat_metadata.role_archetype = role_archetype;
+            chatData = ensureIntimacyMetadata(chatData);
+
+            const jsonlData = chatData.map(JSON.stringify).join('\n');
+            writeFileAtomicSync(filePath, jsonlData, 'utf8');
+            return response.send({ ok: true, chat_metadata: chatData[0].chat_metadata });
+        }
+        return response.status(400).send({ error: 'Invalid chat file' });
+    } catch (error) {
+        console.error(error);
+        return response.status(500).send({ error: true });
+    }
 });
 
 router.post('/search', validateAvatarUrlMiddleware, function (request, response) {
